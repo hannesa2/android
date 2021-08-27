@@ -77,6 +77,8 @@ public class ExtendedListFragment extends Fragment
     private FloatingActionsMenu mFabMain;
     private FloatingActionButton mFabUpload;
     private FloatingActionButton mFabMkdir;
+    private FloatingActionButton mFabScan;
+    private FloatingActionButton mFabEdge;
 
     // Save the state of the scroll in browsing
     private ArrayList<Integer> mIndexes;
@@ -110,6 +112,14 @@ public class ExtendedListFragment extends Fragment
 
     FloatingActionButton getFabMkdir() {
         return mFabMkdir;
+    }
+
+    public FloatingActionButton getFabScan() {
+        return mFabScan;
+    }
+
+    public FloatingActionButton getFabEdge() {
+        return mFabEdge;
     }
 
     public FloatingActionsMenu getFabMain() {
@@ -182,6 +192,8 @@ public class ExtendedListFragment extends Fragment
         mFabMain = v.findViewById(R.id.fab_main);
         mFabUpload = v.findViewById(R.id.fab_upload);
         mFabMkdir = v.findViewById(R.id.fab_mkdir);
+        mFabScan = v.findViewById(R.id.fab_scan);
+        mFabEdge = v.findViewById(R.id.fab_edge);
 
         mCurrentListView = mListView;   // list by default
         if (savedInstanceState != null) {

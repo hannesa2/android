@@ -29,6 +29,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.PowerManager;
 import android.preference.PreferenceManager;
@@ -86,6 +87,9 @@ import com.owncloud.android.ui.preview.PreviewTextFragment;
 import com.owncloud.android.ui.preview.PreviewVideoFragment;
 import com.owncloud.android.utils.FileStorageUtils;
 import com.owncloud.android.utils.PreferenceUtils;
+import info.hannes.cvscanner.CVScanner;
+import info.hannes.liveedgedetection.ScanConstants;
+import info.hannes.liveedgedetection.activity.ScanActivity;
 import org.jetbrains.annotations.NotNull;
 import timber.log.Timber;
 
@@ -111,8 +115,10 @@ public class OCFileListFragment extends ExtendedListFragment implements
     private static final String KEY_FILE = MY_PACKAGE + ".extra.FILE";
     private static final String KEY_FILE_LIST_OPTION = "FILE_LIST_OPTION";
     private static final String KEY_FAB_EVER_CLICKED = "FAB_EVER_CLICKED";
+    private static final long SCAN_HOLD_TINE = 600L;
 
     private static final String GRID_IS_PREFERED_PREFERENCE = "gridIsPrefered";
+    public static final String SHORTCUT_EXTRA = "key";
 
     private static String DIALOG_CREATE_FOLDER = "DIALOG_CREATE_FOLDER";
 
@@ -211,13 +217,13 @@ public class OCFileListFragment extends ExtendedListFragment implements
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         Timber.i("onCreateView() start");
         View v = super.onCreateView(inflater, container, savedInstanceState);
-        Bundle args = getArguments();
-        boolean allowContextualActions = (args != null) && args.getBoolean(ARG_ALLOW_CONTEXTUAL_MODE, false);
-        if (allowContextualActions) {
-            setChoiceModeAsMultipleModal(savedInstanceState);
+        if (getArguments() != null) {
+            boolean allowContextualActions = getArguments().getBoolean(ARG_ALLOW_CONTEXTUAL_MODE, false);
+            if (allowContextualActions) {
+                setChoiceModeAsMultipleModal(savedInstanceState);
+            }
         }
 
-        Timber.i("onCreateView() end");
         return v;
     }
 
@@ -232,6 +238,11 @@ public class OCFileListFragment extends ExtendedListFragment implements
                 mSortOptionsView.setOnCreateFolderListener(this);
                 mSortOptionsView.selectAdditionalView(SortOptionsView.AdditionalView.CREATE_FOLDER);
             }
+        }
+
+        if (requireActivity().getIntent().getStringExtra(SHORTCUT_EXTRA) != null) {
+            requireActivity().getIntent().removeExtra(SHORTCUT_EXTRA);
+            openEdgeScanner();
         }
     }
 
@@ -334,6 +345,8 @@ public class OCFileListFragment extends ExtendedListFragment implements
     private void setFabLabels() {
         getFabUpload().setTitle(getResources().getString(R.string.actionbar_upload));
         getFabMkdir().setTitle(getResources().getString(R.string.actionbar_mkdir));
+        getFabScan().setTitle(getResources().getString(R.string.scan_document));
+        getFabEdge().setTitle(getResources().getString(R.string.scan_edge));
     }
 
     /**
@@ -355,9 +368,14 @@ public class OCFileListFragment extends ExtendedListFragment implements
                 final View uploadBottomSheet = getLayoutInflater().inflate(R.layout.upload_bottom_sheet_fragment, null);
                 final BottomSheetDialog dialog = new BottomSheetDialog(requireContext());
                 dialog.setContentView(uploadBottomSheet);
-                final BottomSheetFragmentItemView uploadFromFilesItemView = uploadBottomSheet.findViewById(R.id.upload_from_files_item_view);
+                final BottomSheetFragmentItemView uploadFromFilesItemView =
+                        uploadBottomSheet.findViewById(R.id.upload_from_files_item_view);
                 BottomSheetFragmentItemView uploadFromCameraItemView =
                         uploadBottomSheet.findViewById(R.id.upload_from_camera_item_view);
+                final BottomSheetFragmentItemView scan_document_upload_linear_layout =
+                        uploadBottomSheet.findViewById(R.id.scan_document_upload_linear_layout);
+                final BottomSheetFragmentItemView scan_edge_upload_linear_layout =
+                        uploadBottomSheet.findViewById(R.id.scan_edge_upload_linear_layout);
                 TextView uploadToTextView = uploadBottomSheet.findViewById(R.id.upload_to_text_view);
                 uploadFromFilesItemView.setOnTouchListener((v13, event) -> {
                     Intent action = new Intent(Intent.ACTION_GET_CONTENT);
@@ -372,6 +390,18 @@ public class OCFileListFragment extends ExtendedListFragment implements
                 });
                 uploadFromCameraItemView.setOnTouchListener((v12, event) -> {
                     ((FileDisplayActivity) getActivity()).getFilesUploadHelper().uploadFromCamera(FileDisplayActivity.REQUEST_CODE__UPLOAD_FROM_CAMERA);
+                    dialog.hide();
+                    return false;
+                });
+                scan_document_upload_linear_layout.setOnTouchListener((v1, event) -> {
+                    CVScanner.INSTANCE.startScanner(requireActivity(), false,
+                            FileDisplayActivity.REQUEST_CODE__UPLOAD_SCANNED_DOCUMENT);
+                    dialog.hide();
+                    return false;
+                });
+                scan_edge_upload_linear_layout.setOnTouchListener((v1, event) -> {
+                    openEdgeScanner();
+
                     dialog.hide();
                     return false;
                 });
@@ -391,6 +421,19 @@ public class OCFileListFragment extends ExtendedListFragment implements
             showSnackMessage(R.string.actionbar_upload);
             return true;
         });
+
+        getFabScan().setOnClickListener(v -> CVScanner.INSTANCE.startScanner(requireActivity(), false,
+                FileDisplayActivity.REQUEST_CODE__UPLOAD_SCANNED_DOCUMENT));
+
+        getFabEdge().setOnClickListener(v -> openEdgeScanner());
+    }
+
+    private void openEdgeScanner() {
+        Intent intent = new Intent(getActivity(), ScanActivity.class);
+        intent.putExtra(ScanConstants.IMAGE_PATH,
+                requireActivity().getExternalFilesDir(Environment.DIRECTORY_PICTURES).toString());
+        intent.putExtra(ScanConstants.TIME_HOLD_STILL, SCAN_HOLD_TINE);
+        getActivity().startActivityForResult(intent, FileDisplayActivity.REQUEST_CODE__UPLOAD_LIVEDGE_DOCUMENT);
     }
 
     /**
@@ -408,6 +451,22 @@ public class OCFileListFragment extends ExtendedListFragment implements
         getFabMkdir().setOnLongClickListener(v -> {
             showSnackMessage(R.string.actionbar_mkdir);
             return true;
+        });
+
+        getFabScan().setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                showSnackMessage(R.string.scan_document);
+                return true;
+            }
+        });
+
+        getFabEdge().setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                showSnackMessage(R.string.scan_edge);
+                return true;
+            }
         });
     }
 
@@ -433,8 +492,12 @@ public class OCFileListFragment extends ExtendedListFragment implements
     private void removeFabLabels() {
         getFabUpload().setTitle(null);
         getFabMkdir().setTitle(null);
+        getFabScan().setTitle(null);
+        getFabEdge().setTitle(null);
         ((TextView) getFabUpload().getTag(com.getbase.floatingactionbutton.R.id.fab_label)).setVisibility(View.GONE);
         ((TextView) getFabMkdir().getTag(com.getbase.floatingactionbutton.R.id.fab_label)).setVisibility(View.GONE);
+        ((TextView) getFabScan().getTag(com.getbase.floatingactionbutton.R.id.fab_label)).setVisibility(View.GONE);
+        ((TextView) getFabEdge().getTag(com.getbase.floatingactionbutton.R.id.fab_label)).setVisibility(View.GONE);
     }
 
     @Override
@@ -492,7 +555,8 @@ public class OCFileListFragment extends ExtendedListFragment implements
 
     @Override
     public void onSortTypeListener(@NotNull SortType sortType, @NotNull SortOrder sortOrder) {
-        SortBottomSheetFragment sortBottomSheetFragment = SortBottomSheetFragment.Companion.newInstance(sortType, sortOrder);
+        SortBottomSheetFragment sortBottomSheetFragment = SortBottomSheetFragment.Companion.newInstance(sortType,
+                sortOrder);
         sortBottomSheetFragment.setSortDialogListener(this);
         sortBottomSheetFragment.show(getChildFragmentManager(), SortBottomSheetFragment.TAG);
     }
@@ -716,7 +780,7 @@ public class OCFileListFragment extends ExtendedListFragment implements
      * Saves the current listed folder
      */
     @Override
-    public void onSaveInstanceState(Bundle outState) {
+    public void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putParcelable(KEY_FILE, mFile);
         outState.putParcelable(KEY_FILE_LIST_OPTION, mFileListOption);
