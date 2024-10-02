@@ -23,7 +23,7 @@ import androidx.lifecycle.ViewModel
 import com.owncloud.android.MainApp
 import com.owncloud.android.MainApp.Companion.versionCode
 import com.owncloud.android.R
-import com.owncloud.android.data.preferences.datasources.SharedPreferencesProvider
+import com.owncloud.android.data.providers.SharedPreferencesProvider
 import com.owncloud.android.providers.ContextProvider
 
 class ReleaseNotesViewModel(
@@ -45,8 +45,36 @@ class ReleaseNotesViewModel(
 
     companion object {
         val releaseNotesList = listOf(
-            ReleaseNote(R.string.release_notes_3_0_4_title1, R.string.release_notes_3_0_4_subtitle1, ReleaseNoteType.SECURITY),
-            ReleaseNote(R.string.release_notes_3_0_4_title2, R.string.release_notes_3_0_4_subtitle2, ReleaseNoteType.CHANGE),
+            ReleaseNote(
+                title = R.string.release_notes_4_4_0_title_improved_from_original_folder_auto_upload,
+                subtitle = R.string.release_notes_4_4_0_subtitle_improved_from_original_folder_auto_upload,
+                type = ReleaseNoteType.ENHANCEMENT
+            ),
+            ReleaseNote(
+                title = R.string.release_notes_4_4_0_title_resharing_capability,
+                subtitle = R.string.release_notes_4_4_0_subtitle_resharing_capability,
+                type = ReleaseNoteType.ENHANCEMENT
+            ),
+            ReleaseNote(
+                title = R.string.release_notes_4_4_6_4_bugfixes_title,
+                subtitle = R.string.release_notes_4_4_6_4_bugfixes_subtitle,
+                type = ReleaseNoteType.BUGFIX
+            ),
+            ReleaseNote(
+                title = R.string.release_notes_4_4_0_title_audio_player_android14,
+                subtitle = R.string.release_notes_4_4_0_subtitle_audio_player_android14,
+                type = ReleaseNoteType.BUGFIX
+            ),
+            ReleaseNote(
+                title = R.string.release_notes_4_3_0_title_accessibility_improvements,
+                subtitle = R.string.release_notes_4_3_0_subtitle_accessibility_improvements,
+                type = ReleaseNoteType.ENHANCEMENT
+            ),
+            ReleaseNote(
+                title = R.string.release_notes_bugfixes_title,
+                subtitle = R.string.release_notes_bugfixes_subtitle,
+                type = ReleaseNoteType.BUGFIX
+            ),
         )
     }
 }
